@@ -9,10 +9,11 @@ public class BottomButtonHandler : MonoBehaviour
     [SerializeField] private Button buyButton;
     [SerializeField] private Button sellButton;
     [SerializeField] private Button inventoryButton;
+    
+    private readonly List<string> _selectedItemList = new();
 
     private void OnEnable()
     {
-        Debug.Log($"Setting up Button Click Listeners");
         buyButton.onClick.AddListener(OnBuyButtonClick);
         sellButton.onClick.AddListener(OnSellButtonClick);
         inventoryButton.onClick.AddListener(OnInventoryButtonClick);
@@ -20,7 +21,6 @@ public class BottomButtonHandler : MonoBehaviour
 
     private void OnDisable()
     {
-        Debug.Log($"Removing Button Click Listeners");
         buyButton.onClick.RemoveListener(OnBuyButtonClick);
         sellButton.onClick.RemoveListener(OnSellButtonClick);
         inventoryButton.onClick.RemoveListener(OnInventoryButtonClick);
@@ -29,7 +29,18 @@ public class BottomButtonHandler : MonoBehaviour
 
     private void OnBuyButtonClick()
     {
-        Debug.Log($"Buy Button Clicked");
+        foreach (var itemInfo in ItemListHandler.Instance.ItemList)
+        {
+            if (itemInfo.IsSelected)
+            {
+                _selectedItemList.Add(itemInfo.name);
+            }
+        }
+        
+        foreach(var itemName in _selectedItemList)
+        {
+            Debug.Log($"Buy Button Clicked with {itemName}");
+        }
     }
 
     private void OnSellButtonClick()
