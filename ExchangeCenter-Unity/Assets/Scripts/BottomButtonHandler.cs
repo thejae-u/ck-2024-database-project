@@ -36,11 +36,29 @@ public class BottomButtonHandler : MonoBehaviour
                 _selectedItemList.Add(itemInfo.name);
             }
         }
-        
-        foreach(var itemName in _selectedItemList)
+
+        if (_selectedItemList.Count == 0)
         {
-            Debug.Log($"Buy Button Clicked with {itemName}");
+            Debug.Log($"No Item Selected");
+            return;
         }
+        
+        string[] selectedItems = _selectedItemList.ToArray();
+        string sendData = string.Join(",", selectedItems);
+
+        NetworkData data = new (ENetworkDataType.Request, sendData);
+        NetworkManager.Instance.EnqueueData(data);
+        
+        // TODO : 데이터베이스에서 확인 된 상태를 받아서 처리
+        // TODO : 구매가 완료된 아이템에 한하여 인벤토리에 추가
+        
+        ResetSelectState();
+    }
+
+    private void ResetSelectState()
+    {
+        _selectedItemList.Clear();
+        ItemListHandler.Instance.ItemDeselectAll();
     }
 
     private void OnSellButtonClick()

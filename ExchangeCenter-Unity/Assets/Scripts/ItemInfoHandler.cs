@@ -27,6 +27,12 @@ public class ItemInfoHandler : MonoBehaviour
     {
         itemSelectButton.onClick.RemoveListener(OnItemSelectButtonClick);
     }
+
+    public void Deselect()
+    {
+        IsSelected = false;
+        itemInfoImage.color = Color.white;
+    }
     
     private void OnItemSelectButtonClick()
     {

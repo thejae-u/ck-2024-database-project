@@ -28,4 +28,17 @@ public class ItemListHandler : Singleton<ItemListHandler>
             _itemInfoList.Add(itemInfo.GetComponent<ItemInfoHandler>());
         }
     }
+
+    public void ItemDeselectAll()
+    {
+        foreach (var itemInfo in _itemInfoList)
+        {
+            if (!itemInfo.IsSelected)
+            {
+                continue;
+            }
+            
+            itemInfo.Deselect();
+        }
+    }
 }
