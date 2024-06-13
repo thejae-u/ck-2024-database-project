@@ -13,9 +13,11 @@ public class GameServer
 
     private static readonly Queue<NetworkData> _data = new Queue<NetworkData>();
     private static CancellationTokenSource _cts = new CancellationTokenSource();
+    private static readonly List<TcpClient> _connectedClients = new List<TcpClient>();
 
     private static async Task Main(string[] args)
     {
+        AppDomain.CurrentDomain.ProcessExit += new EventHandler(OnExit);
         TcpListener server = new TcpListener(IPAddress.Any, PORT);
         server.Start();
         Log.Print("Server Started on " + PORT);
@@ -42,6 +44,22 @@ public class GameServer
 
         server.Stop();
         Log.Print("Server Stopped");
+    }
+    
+    private static void OnExit(object sender, EventArgs e)
+    {
+        if(_connectedClients.Count == 0)
+        {
+            return;
+        }
+
+        Log.Print("Connection Close");
+
+        foreach(var client in _connectedClients)
+        {
+            Log.Print(client.Client.RemoteEndPoint + " Disconnected");
+            client.Close();
+        }
     }
 
     private static async Task HandleDequeueNetworkData()
@@ -90,6 +108,11 @@ public class GameServer
                 Log.Print($"Invalid Type Request from " + data.client.Client.RemoteEndPoint);
                 try
                 {
+                    lock (_connectedClients)
+                    {
+                        _connectedClients.Remove(data.client);
+                    }
+
                     data.client.Close();
                 }
                 catch (Exception e)
@@ -102,6 +125,11 @@ public class GameServer
 
     private static async Task HandleClientAsync(TcpClient client)
     {
+        lock (_connectedClients)
+        {
+            _connectedClients.Add(client);
+        }
+
         NetworkStream stream = client.GetStream();
         byte[] buffer = new byte[BUFFER_SIZE];
 
@@ -113,7 +141,7 @@ public class GameServer
 
                 if (bytesRead == 0)
                 {
-                    Console.WriteLine($"Disconnected {client.Client.RemoteEndPoint}");
+                    Log.Print("Disconnected " + client.Client.RemoteEndPoint);
                     break;
                 }
 
@@ -142,9 +170,14 @@ public class GameServer
         }
         finally
         {
+            lock (_connectedClients)
+            {
+                _connectedClients.Remove(client);
+            }
+
             stream.Close();
             client.Close();
-        }
+        }      
     }
 
     private static async Task HandleInputAsync(CancellationTokenSource cts)

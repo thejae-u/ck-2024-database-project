@@ -8,6 +8,9 @@ using System.Threading.Tasks;
 public enum EQueryType
 {
     None,
+    Select,
+    Update,
+
 }
 
 public class Query
@@ -33,10 +36,13 @@ public static class DatabaseHandler
 
     public static void EnqueueQuery(Query query)
     {
-        queries.Enqueue(query);
+        lock(queries)
+        {
+            queries.Enqueue(query);
+        }
     }
 
-    private static async Task<bool> ExecuteQuery()
+    private static async Task ExecuteQuery()
     {
         while (true)
         {
