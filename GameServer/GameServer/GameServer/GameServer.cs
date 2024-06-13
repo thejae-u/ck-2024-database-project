@@ -14,8 +14,8 @@ public class GameServer
     private static readonly Queue<NetworkData> _data = new Queue<NetworkData>();
     private static CancellationTokenSource _cts = new CancellationTokenSource();
     private static readonly List<TcpClient> _connectedClients = new List<TcpClient>();
-
-    private static async Task Main(string[] args)
+    
+    private static async Task Main()
     {
         AppDomain.CurrentDomain.ProcessExit += new EventHandler(OnExit);
         TcpListener server = new TcpListener(IPAddress.Any, PORT);
@@ -33,7 +33,7 @@ public class GameServer
             if (server.Pending())
             {
                 TcpClient client = await server.AcceptTcpClientAsync();
-                Log.Print("Client " + client.Client.RemoteEndPoint + " Connected");
+                Log.Print("Client " + GetClientIP(client) + " Connected");
                 _ = HandleClientAsync(client);
             }
             else
@@ -57,7 +57,7 @@ public class GameServer
 
         foreach(var client in _connectedClients)
         {
-            Log.Print(client.Client.RemoteEndPoint + " Disconnected");
+            Log.Print(GetClientIP(client) + " Disconnected");
             client.Close();
         }
     }
@@ -85,7 +85,7 @@ public class GameServer
 
     private static void ApplyNetworkRequest(NetworkData data)
     {
-        Log.Print(data.client.Client.RemoteEndPoint + " : Request Type \"" + data.type + "\" Request Data \"" + data.data + "\"");
+        Log.Print(GetClientIP(data.client) + " : Request Type \"" + data.type + "\" Request Data \"" + data.data + "\"");
 
         switch (data.type)
         {
@@ -141,7 +141,7 @@ public class GameServer
 
                 if (bytesRead == 0)
                 {
-                    Log.Print("Disconnected " + client.Client.RemoteEndPoint);
+                    Log.Print("Disconnected " + GetClientIP(client));
                     break;
                 }
 
@@ -191,6 +191,11 @@ public class GameServer
                 break;
             }
         }
+    }
+
+    private static IPAddress GetClientIP(TcpClient client)
+    {
+        return ((IPEndPoint)client.Client.RemoteEndPoint).Address;
     }
 
     private static ENetworkDataType ConvertStringToNetworkDataType(string typeString)
