@@ -96,7 +96,11 @@ public class GameServer
                 break;
             case ENetworkDataType.Register:
                 break;
-            case ENetworkDataType.Request:
+            case ENetworkDataType.Buy:
+                break;
+            case ENetworkDataType.Sell:
+                break;
+            case ENetworkDataType.Search:
                 break;
             case ENetworkDataType.Response:
                 break;
@@ -209,8 +213,12 @@ public class GameServer
                 return ENetworkDataType.Login;
             case "Register":
                 return ENetworkDataType.Register;
-            case "Request":
-                return ENetworkDataType.Request;
+            case "Buy":
+                return ENetworkDataType.Buy;
+            case "Sell":
+                return ENetworkDataType.Sell;
+            case "Search":
+                return ENetworkDataType.Search;
             case "Response":
                 return ENetworkDataType.Response;
             case "Log":

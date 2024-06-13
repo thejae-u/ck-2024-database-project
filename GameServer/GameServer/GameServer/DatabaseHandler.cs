@@ -31,8 +31,7 @@ public static class DatabaseHandler
 {
     private static readonly Queue<Query> queries = new Queue<Query>();
 
-    private static readonly string STR_CONN = $"Server=localhost;Database=ck_exchange_center;Uid=root;pwd=root";
-    private static MySqlConnection _conn = new MySqlConnection(STR_CONN);
+    private static MySqlConnection _conn = new MySqlConnection(MysqlConnnectString.STR_CONN);
 
     public static void Start()
     {

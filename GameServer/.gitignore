@@ -7,6 +7,9 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
 
+# Mysql Id and Password
+MysqlConnectString.cs
+
 # User-specific files
 *.rsuser
 *.suo
