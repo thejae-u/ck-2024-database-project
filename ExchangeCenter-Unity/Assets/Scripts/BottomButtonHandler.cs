@@ -43,12 +43,10 @@ public class BottomButtonHandler : MonoBehaviour
             return;
         }
         
-        Log.LogSend("Buy");
-        
         string[] selectedItems = _selectedItemList.ToArray();
         string sendData = string.Join(",", selectedItems);
 
-        NetworkData data = new (ENetworkDataType.Request, sendData);
+        NetworkData data = new (ENetworkDataType.Buy, sendData);
         NetworkManager.Instance.EnqueueData(data);
         
         // TODO : 데이터베이스에서 확인 된 상태를 받아서 처리
