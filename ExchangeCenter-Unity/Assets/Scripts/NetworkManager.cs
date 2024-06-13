@@ -79,10 +79,8 @@ public class NetworkManager : Singleton<NetworkManager>
     private async void SendDataToServer()
     {
         IsRunning = true;
-        int runningCount = 0;
         while (true)
         {
-            Debug.Log($"runningCount : {++runningCount} / IsRunning : {IsRunning}");
             if (_sendQueue.Count == 0)
             {
                 if (!IsRunning)
@@ -94,9 +92,11 @@ public class NetworkManager : Singleton<NetworkManager>
             }    
             
             NetworkData data = _sendQueue.Dequeue();
+            string sendData = $"{data.type.ToString()},{data.data}";
+            
             try
             {
-                byte[] buffer = System.Text.Encoding.ASCII.GetBytes(JsonUtility.ToJson(data));
+                byte[] buffer = System.Text.Encoding.UTF8.GetBytes(sendData);
                 await _stream.WriteAsync(buffer, 0, buffer.Length);
             }
             catch (Exception e)
