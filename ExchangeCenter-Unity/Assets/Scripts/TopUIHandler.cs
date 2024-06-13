@@ -29,6 +29,7 @@ public class TopUIHandler : MonoBehaviour
             return;    
         }
         
+        Log.LogSend("Search");
         Debug.Log($"Search Button Clicked with {searchText}");
     }
 }

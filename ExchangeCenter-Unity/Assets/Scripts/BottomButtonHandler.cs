@@ -43,6 +43,8 @@ public class BottomButtonHandler : MonoBehaviour
             return;
         }
         
+        Log.LogSend("Buy");
+        
         string[] selectedItems = _selectedItemList.ToArray();
         string sendData = string.Join(",", selectedItems);
 
@@ -63,11 +65,13 @@ public class BottomButtonHandler : MonoBehaviour
 
     private void OnSellButtonClick()
     {
+        Log.LogSend("Sell");
         Debug.Log($"Sell Button Clicked");
     }
 
     private void OnInventoryButtonClick()
     {
+        Log.LogSend("Inventory");
         Debug.Log($"Inventory Button Clicked");
     }
 }

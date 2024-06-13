@@ -21,8 +21,8 @@ public enum ENetworkDataType
 
 public class NetworkData
 {
-    public ENetworkDataType type;
-    public string data;
+    public readonly ENetworkDataType type;
+    public readonly string data;
     
     public NetworkData(ENetworkDataType type, string data)
     {
@@ -35,7 +35,8 @@ public class NetworkManager : Singleton<NetworkManager>
 {
     private bool IsRunning { get; set; }
     private const int PORT = 56000;
-    private const string IP = "127.0.0.1";
+    private const string DNS = "jaeu.iptime.org";
+    private const string IP = "127.0.01";
 
     private readonly Queue<NetworkData> _sendQueue = new();
 
@@ -50,6 +51,10 @@ public class NetworkManager : Singleton<NetworkManager>
 
     private async Task ConnectToServer()
     {
+        IPHostEntry ip = await Dns.GetHostEntryAsync(DNS);
+        string ipToString = ip.AddressList[0].ToString();
+        //Debug.Log($"Connecting to server {ipToString}:{PORT}");
+        
         try
         {
             _client = new TcpClient();
@@ -58,16 +63,26 @@ public class NetworkManager : Singleton<NetworkManager>
 
             _stream = _client.GetStream();
 
-            Debug.Log("Connected to server");
+            Debug.Log($"Connected to server {IP}:{PORT}");
+            IsRunning = true;
         }
         catch (SocketException e)
         {
-            Application.Quit(-999);
             Debug.LogError($"Socket Exception : {e.Message}");
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+            Application.Quit(0);
+#endif
         }
         catch (Exception e)
         {
             Debug.LogError($"Exception : {e.Message}");
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+            Application.Quit(0);
+#endif
         }
     }
 
@@ -78,7 +93,6 @@ public class NetworkManager : Singleton<NetworkManager>
 
     private async void SendDataToServer()
     {
-        IsRunning = true;
         while (true)
         {
             if (_sendQueue.Count == 0)
@@ -109,6 +123,11 @@ public class NetworkManager : Singleton<NetworkManager>
 
     private void OnApplicationQuit()
     {
+        if (!IsRunning)
+        {
+            return;
+        }
+        
         _stream?.Close();
         _client?.Close();
         IsRunning = false;
