@@ -2,58 +2,73 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 
-public class GameSerever
+public class GameServer
 {
     public const int PORT = 56000;
     public const int BUFFER_SIZE = 1024;
 
     private static readonly Queue<NetworkData> _data = new Queue<NetworkData>();
-    private static Task _dequeueTask;
+    private static CancellationTokenSource _cts = new CancellationTokenSource();
 
     private static async Task Main(string[] args)
     {
         TcpListener server = new TcpListener(IPAddress.Any, PORT);
         server.Start();
-        string log = $"{DateTime.Now} Server Started on {PORT}";
-        Console.WriteLine(log);
+        Log.Print("Server Started on " + PORT);
 
         _ = Task.Run(HandleDequeueNetworkData);
 
-        log = $"{DateTime.Now} Client Accept Started";
-        Console.WriteLine(log);
-        while (true)
+        _ = Task.Run(() => HandleInputAsync(_cts));
+
+        Log.Print("Client Accept Started");
+
+        while (!_cts.Token.IsCancellationRequested)
         {
-            TcpClient client = await server.AcceptTcpClientAsync();
-            log = $"{DateTime.Now} Client {client.Client.RemoteEndPoint} Connected.";
-            Console.WriteLine(log);
-            HandleClientAsync(client);
+            if (server.Pending())
+            {
+                TcpClient client = await server.AcceptTcpClientAsync();
+                Log.Print("Client " + client.Client.RemoteEndPoint + " Connected");
+                _ = HandleClientAsync(client);
+            }
+            else
+            {
+                await Task.Delay(10);
+            }
         }
+
+        server.Stop();
+        Log.Print("Server Stopped");
     }
 
-    private static Task HandleDequeueNetworkData()
+    private static async Task HandleDequeueNetworkData()
     {
-        string log = $"{DateTime.Now} DequeueHandler Started";
-        Console.WriteLine(log);
+        Log.Print("DequeueHandler Started");
 
-        while (true)
+        while (!_cts.Token.IsCancellationRequested)
         {
-            if( _data.Count == 0 )
+            if (_data.Count == 0)
             {
+                await Task.Delay(10);
                 continue;
             }
 
-            NetworkData networkData = _data.Dequeue();
+            NetworkData networkData;
+            lock (_data)
+            {
+                networkData = _data.Dequeue();
+            }
             ApplyNetworkRequest(networkData);
         }
     }
 
     private static void ApplyNetworkRequest(NetworkData data)
     {
-        string log = $"{DateTime.Now} {data.client.Client.RemoteEndPoint} : Request Type \"{data.type}\" Request Data \"{data.data}\"";
-        Console.WriteLine(log);
+        Log.Print(data.client.Client.RemoteEndPoint + " : Request Type \"" + data.type + "\" Request Data \"" + data.data + "\"");
+
         switch (data.type)
         {
             case ENetworkDataType.Login:
@@ -72,27 +87,27 @@ public class GameSerever
                 break;
             case ENetworkDataType.None:
             default:
-                Console.WriteLine($"Invalid Type Request from {data.client.Client.RemoteEndPoint}");
+                Log.Print($"Invalid Type Request from " + data.client.Client.RemoteEndPoint);
                 try
                 {
                     data.client.Close();
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine(e.Message);
+                    Log.Print("Exception: " + e.Message);
                 }
                 break;
         }
     }
 
-    private static async void HandleClientAsync(TcpClient client)
+    private static async Task HandleClientAsync(TcpClient client)
     {
         NetworkStream stream = client.GetStream();
         byte[] buffer = new byte[BUFFER_SIZE];
 
         try
         {
-            while (true)
+            while (!_cts.Token.IsCancellationRequested)
             {
                 int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
 
@@ -115,17 +130,33 @@ public class GameSerever
 
                 NetworkData networkData = new NetworkData(client, ConvertStringToNetworkDataType(type), recvData);
 
-                _data.Enqueue(networkData);
+                lock (_data)
+                {
+                    _data.Enqueue(networkData);
+                }
             }
         }
-        catch (Exception ex)
+        catch (Exception e)
         {
-            Console.WriteLine("Exception: " + ex.Message);
+            Log.Print("Exception: " + e.Message);
         }
         finally
         {
             stream.Close();
             client.Close();
+        }
+    }
+
+    private static async Task HandleInputAsync(CancellationTokenSource cts)
+    {
+        while (!cts.Token.IsCancellationRequested)
+        {
+            string input = await Task.Run(() => Console.ReadLine());
+            if (input.Equals("exit", StringComparison.OrdinalIgnoreCase))
+            {
+                cts.Cancel();
+                break;
+            }
         }
     }
 
@@ -147,7 +178,6 @@ public class GameSerever
                 return ENetworkDataType.Error;
             case "Disconnect":
                 return ENetworkDataType.Error;
-
             // Invalid Area
             case "None":
             default:
@@ -155,4 +185,3 @@ public class GameSerever
         }
     }
 }
-
