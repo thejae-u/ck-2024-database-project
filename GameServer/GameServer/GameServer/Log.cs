@@ -7,11 +7,21 @@ using System.Threading.Tasks;
 public static class Log
 {
     /// <summary>
-    /// 일반로그
+    /// DB 저장 로그
     /// </summary>
-    public static void Print(string message)
+    public static void PrintToDB(string message)
+    {
+        Query query = new Query(EQueryType.Log, message);
+        DatabaseHandler.EnqueueQuery(query);
+
+        Console.WriteLine($"{DateTime.Now} {message} saved in DB");
+    }
+
+    /// <summary>
+    /// 일반 서버 출력 로그
+    /// </summary>
+    public static void PrintToServer(string message)
     {
         Console.WriteLine($"{DateTime.Now} {message}");
-        // TODO : DB 저장
     }
 }

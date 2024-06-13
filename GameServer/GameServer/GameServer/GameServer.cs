@@ -20,20 +20,22 @@ public class GameServer
         AppDomain.CurrentDomain.ProcessExit += new EventHandler(OnExit);
         TcpListener server = new TcpListener(IPAddress.Any, PORT);
         server.Start();
-        Log.Print("Server Started on " + PORT);
+        Log.PrintToServer("Server Started on " + PORT);
 
         _ = Task.Run(HandleDequeueNetworkData);
 
         _ = Task.Run(() => HandleInputAsync(_cts));
 
-        Log.Print("Client Accept Started");
+        DatabaseHandler.Start();
+
+        Log.PrintToServer("Client Accept Started");
 
         while (!_cts.Token.IsCancellationRequested)
         {
             if (server.Pending())
             {
                 TcpClient client = await server.AcceptTcpClientAsync();
-                Log.Print("Client " + GetClientIP(client) + " Connected");
+                Log.PrintToDB("Client " + GetClientIP(client) + " Connected");
                 _ = HandleClientAsync(client);
             }
             else
@@ -43,7 +45,7 @@ public class GameServer
         }
 
         server.Stop();
-        Log.Print("Server Stopped");
+        Log.PrintToServer("Server Stopped");
     }
     
     private static void OnExit(object sender, EventArgs e)
@@ -53,18 +55,19 @@ public class GameServer
             return;
         }
 
-        Log.Print("Connection Close");
+        Log.PrintToServer("Connection Close");
 
         foreach(var client in _connectedClients)
         {
-            Log.Print(GetClientIP(client) + " Disconnected");
+            // DB has Disconnected -> server Log
+            Log.PrintToServer(GetClientIP(client) + " Disconnected");
             client.Close();
         }
     }
 
     private static async Task HandleDequeueNetworkData()
     {
-        Log.Print("DequeueHandler Started");
+        Log.PrintToServer("DequeueHandler Started");
 
         while (!_cts.Token.IsCancellationRequested)
         {
@@ -85,7 +88,7 @@ public class GameServer
 
     private static void ApplyNetworkRequest(NetworkData data)
     {
-        Log.Print(GetClientIP(data.client) + " : Request Type \"" + data.type + "\" Request Data \"" + data.data + "\"");
+        Log.PrintToDB(GetClientIP(data.client) + " : Request Type \"" + data.type + "\" Request Data \"" + data.data + "\"");
 
         switch (data.type)
         {
@@ -105,7 +108,7 @@ public class GameServer
                 break;
             case ENetworkDataType.None:
             default:
-                Log.Print($"Invalid Type Request from " + data.client.Client.RemoteEndPoint);
+                Log.PrintToDB($"Invalid Type Request from " + GetClientIP(data.client));
                 try
                 {
                     lock (_connectedClients)
@@ -117,7 +120,7 @@ public class GameServer
                 }
                 catch (Exception e)
                 {
-                    Log.Print("Exception: " + e.Message);
+                    Log.PrintToServer("Exception: " + e.Message);
                 }
                 break;
         }
@@ -141,7 +144,7 @@ public class GameServer
 
                 if (bytesRead == 0)
                 {
-                    Log.Print("Disconnected " + GetClientIP(client));
+                    Log.PrintToDB("Disconnected " + GetClientIP(client));
                     break;
                 }
 
@@ -166,7 +169,7 @@ public class GameServer
         }
         catch (Exception e)
         {
-            Log.Print("Exception: " + e.Message);
+            Log.PrintToServer("Exception: " + e.Message);
         }
         finally
         {
