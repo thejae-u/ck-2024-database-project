@@ -36,7 +36,6 @@ public class NetworkManager : Singleton<NetworkManager>
     private bool IsRunning { get; set; }
     private const int PORT = 56000;
     private const string DNS = "jaeu.iptime.org";
-    private const string IP = "127.0.01";
 
     private readonly Queue<NetworkData> _sendQueue = new();
 
@@ -53,17 +52,18 @@ public class NetworkManager : Singleton<NetworkManager>
     {
         IPHostEntry ip = await Dns.GetHostEntryAsync(DNS);
         string ipToString = ip.AddressList[0].ToString();
-        //Debug.Log($"Connecting to server {ipToString}:{PORT}");
+        Debug.Log($"Connecting to server {ipToString}:{PORT}");
         
         try
         {
             _client = new TcpClient();
 
-            await _client.ConnectAsync(IP, PORT);
+            await _client.ConnectAsync(ipToString, PORT);
 
             _stream = _client.GetStream();
 
-            Debug.Log($"Connected to server {IP}:{PORT}");
+            IPAddress serverIP = ((IPEndPoint)_client.Client.RemoteEndPoint).Address;
+            Debug.Log($"Connected to server {serverIP}:{PORT}");
             IsRunning = true;
         }
         catch (SocketException e)
