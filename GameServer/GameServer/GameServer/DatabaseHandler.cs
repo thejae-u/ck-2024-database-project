@@ -12,6 +12,7 @@ public enum EQueryType
     None,
     Log,
     Update,
+    Get
 }
 
 public class Query
@@ -79,7 +80,8 @@ public static class DatabaseHandler
                     case EQueryType.Update:
                         strQuery = "";
                         break;
-
+                    case EQueryType.Get:
+                        break;
                     case EQueryType.None:
                     default:
                         Log.PrintToServer("Invalid Query " + query.queryMessage);

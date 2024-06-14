@@ -14,7 +14,7 @@ public static class Log
         Query query = new Query(EQueryType.Log, message);
         DatabaseHandler.EnqueueQuery(query);
 
-        Console.WriteLine($"{DateTime.Now} {message} saved in DB");
+        Console.WriteLine($"[{DateTime.Now}] {message} saved in DB");
     }
 
     /// <summary>
@@ -22,6 +22,6 @@ public static class Log
     /// </summary>
     public static void PrintToServer(string message)
     {
-        Console.WriteLine($"{DateTime.Now} {message}");
+        Console.WriteLine($"[{DateTime.Now}] {message}");
     }
 }

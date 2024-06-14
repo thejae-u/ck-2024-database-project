@@ -88,7 +88,7 @@ public class GameServer
 
     private static void ApplyNetworkRequest(NetworkData data)
     {
-        Log.PrintToDB(GetClientIP(data.client) + " : Request Type \"" + data.type + "\" Request Data \"" + data.data + "\"");
+        Log.PrintToDB(GetClientIP(data.client) + " : Request Type \'"+ data.type + "\' Request Data \'" + data.data + "\'");
 
         switch (data.type)
         {
