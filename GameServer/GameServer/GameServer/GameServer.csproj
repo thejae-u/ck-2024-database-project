@@ -98,7 +98,7 @@
     <Compile Include="DatabaseHandler.cs" />
     <Compile Include="GameServer.cs" />
     <Compile Include="Log.cs" />
-    <Compile Include="MysqlData.cs" />
+    <Compile Include="MysqlConnectString.cs" />
     <Compile Include="NetworkData.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

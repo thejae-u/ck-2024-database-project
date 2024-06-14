@@ -31,7 +31,7 @@ public static class DatabaseHandler
 {
     private static readonly Queue<Query> queries = new Queue<Query>();
 
-    private static MySqlConnection _conn = new MySqlConnection(MysqlConnnectString.STR_CONN);
+    private static MySqlConnection _conn = new MySqlConnection(MysqlConnectString.STR_CONN);
 
     public static void Start()
     {
