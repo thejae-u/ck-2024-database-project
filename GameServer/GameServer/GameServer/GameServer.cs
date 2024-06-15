@@ -143,19 +143,24 @@ public class GameServer
         }
 
         NetworkStream stream = client.GetStream();
-        byte[] buffer = new byte[BUFFER_SIZE];
 
         try
         {
             while (!_cts.Token.IsCancellationRequested)
             {
-                int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
+                byte[] lengthBuffer = new byte[4];
+                int lengthRead = await stream.ReadAsync(lengthBuffer, 0, lengthBuffer.Length);
 
-                if (bytesRead == 0)
+                if (lengthRead == 0)
                 {
                     Log.PrintToDB("Disconnected " + GetClientIP(client));
                     break;
                 }
+
+                int dataLength = BitConverter.ToInt32(lengthBuffer, 0);
+                byte[] buffer = new byte[dataLength];
+
+                int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
 
                 string recvData = Encoding.UTF8.GetString(buffer, 0, bytesRead);
                 string type = "";
@@ -202,7 +207,7 @@ public class GameServer
                 await Task.Delay(100);
             }
 
-            Console.WriteLine($"Data : {data.data}");
+            Console.WriteLine($"{GetClientIP(data.client)} {data.data}");
 
             string sendDataStr = $"{data.type},{data.data}";
             NetworkStream stream = data.client.GetStream();
@@ -210,6 +215,9 @@ public class GameServer
             try
             {
                 byte[] buffer = System.Text.Encoding.UTF8.GetBytes(sendDataStr);
+                byte[] lengthBuffer = BitConverter.GetBytes(buffer.Length);
+
+                await stream.WriteAsync(lengthBuffer, 0, lengthBuffer.Length);
                 await stream.WriteAsync(buffer, 0, buffer.Length);
 
                 Log.PrintToDB($"Send To Client {data.type} {data.data} {GetClientIP(data.client)}");
