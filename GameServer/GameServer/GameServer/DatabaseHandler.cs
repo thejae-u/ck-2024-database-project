@@ -7,6 +7,13 @@ using System.Text;
 using System.Threading.Tasks;
 using MySql.Data.MySqlClient;
 
+public enum ETableList
+{
+    item_list,
+    userinfo,
+    log
+}
+
 public enum EQueryType
 {
     None,
@@ -17,11 +24,19 @@ public enum EQueryType
 
 public class Query
 {
+    public NetworkData data;
     public EQueryType queryType;
     public string queryMessage;
 
     public Query(EQueryType queryType, string queryMessage)
     {
+        this.queryType = queryType;
+        this.queryMessage = queryMessage;
+    }
+
+    public Query(NetworkData data, EQueryType queryType, string queryMessage)
+    {
+        this.data = data;
         this.queryType = queryType;
         this.queryMessage = queryMessage;
     }
@@ -63,8 +78,13 @@ public static class DatabaseHandler
             }
 
             // TODO : SQL 연결 후 Query 처리, Query Type 에 따라서 정해진 Query 전송
-            Query query = queries.Dequeue();
-            string strQuery = "";
+            Query query;
+            lock (queries)
+            {
+                query = queries.Dequeue();
+            }
+
+            string strQuery;
             MySqlCommand cmd = new MySqlCommand();
 
             try
@@ -81,6 +101,37 @@ public static class DatabaseHandler
                         strQuery = "";
                         break;
                     case EQueryType.Get:
+                        ETableList tableToGet = (ETableList)Enum.Parse(typeof(ETableList), query.queryMessage);
+                        strQuery = $"SELECT * FROM {tableToGet}";
+                        cmd = new MySqlCommand(strQuery, _conn);
+
+                        MySqlDataReader reader = (MySqlDataReader)await cmd.ExecuteReaderAsync();
+
+                        ETableList table = (ETableList)Enum.Parse(typeof(ETableList), query.queryMessage);
+                        switch (table)
+                        {
+                            case ETableList.item_list:
+                                NetworkData sendData = new NetworkData(query.data.client, ENetworkDataType.Get, "");
+                                
+                                while (reader.Read())
+                                {
+                                    sendData.data = $"item_list@{reader["uid"]},{reader["item_name"]},{reader["price"]}";
+                                    lock (GameServer.SendData)
+                                    {
+                                        GameServer.SendData.Enqueue(sendData);
+                                    }
+                                }
+
+                                break;
+                            case ETableList.userinfo:
+                                break;
+                            case ETableList.log:
+                            default:
+                                Log.PrintToServer("Invalid Query " + query.queryMessage);
+                                break;
+                        }
+
+                        reader.Close();
                         break;
                     case EQueryType.None:
                     default:

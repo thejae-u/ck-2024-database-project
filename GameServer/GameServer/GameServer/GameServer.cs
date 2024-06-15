@@ -12,19 +12,24 @@ public class GameServer
     public const int BUFFER_SIZE = 1024;
 
     private static readonly Queue<NetworkData> _data = new Queue<NetworkData>();
+    private static readonly Queue<NetworkData> _sendData = new Queue<NetworkData>();
     private static CancellationTokenSource _cts = new CancellationTokenSource();
     private static readonly List<TcpClient> _connectedClients = new List<TcpClient>();
+
+    public static Queue<NetworkData> SendData => _sendData;
     
     private static async Task Main()
     {
         AppDomain.CurrentDomain.ProcessExit += new EventHandler(OnExit);
         TcpListener server = new TcpListener(IPAddress.Any, PORT);
         server.Start();
-        Log.PrintToServer("Server Started on " + PORT);
+        Log.PrintToServer($"Server Started on {PORT}");
 
         _ = Task.Run(HandleDequeueNetworkData);
 
         _ = Task.Run(() => HandleInputAsync(_cts));
+
+        _ = Task.Run(SendDataToClientAsync);
 
         DatabaseHandler.Start();
 
@@ -35,7 +40,7 @@ public class GameServer
             if (server.Pending())
             {
                 TcpClient client = await server.AcceptTcpClientAsync();
-                Log.PrintToDB("Client " + GetClientIP(client) + " Connected");
+                Log.PrintToDB($"Client {GetClientIP(client)} Connected");
                 _ = HandleClientAsync(client);
             }
             else
@@ -60,7 +65,7 @@ public class GameServer
         foreach(var client in _connectedClients)
         {
             // DB has Disconnected -> server Log
-            Log.PrintToServer(GetClientIP(client) + " Disconnected");
+            Log.PrintToServer($"{GetClientIP(client)} Disconnected");
             client.Close();
         }
     }
@@ -82,13 +87,14 @@ public class GameServer
             {
                 networkData = _data.Dequeue();
             }
+
             ApplyNetworkRequest(networkData);
         }
     }
 
     private static void ApplyNetworkRequest(NetworkData data)
     {
-        Log.PrintToDB(GetClientIP(data.client) + " : Request Type \'"+ data.type + "\' Request Data \'" + data.data + "\'");
+        Log.PrintToDB($"{GetClientIP(data.client)} : Request Type \'{data.type}\' Request Data \'{data.data}\'");
 
         switch (data.type)
         {
@@ -96,13 +102,15 @@ public class GameServer
                 break;
             case ENetworkDataType.Register:
                 break;
+            case ENetworkDataType.Get:
+                Query query = new Query(data, EQueryType.Get, data.data);
+                DatabaseHandler.EnqueueQuery(query);
+                break;
             case ENetworkDataType.Buy:
                 break;
             case ENetworkDataType.Sell:
                 break;
             case ENetworkDataType.Search:
-                break;
-            case ENetworkDataType.Response:
                 break;
             case ENetworkDataType.Log:
                 break;
@@ -112,7 +120,7 @@ public class GameServer
                 break;
             case ENetworkDataType.None:
             default:
-                Log.PrintToDB($"Invalid Type Request from " + GetClientIP(data.client));
+                Log.PrintToDB($"Invalid Type Request from {GetClientIP(data.client)}");
                 try
                 {
                     lock (_connectedClients)
@@ -124,7 +132,7 @@ public class GameServer
                 }
                 catch (Exception e)
                 {
-                    Log.PrintToServer("Exception: " + e.Message);
+                    Log.PrintToServer($"Exception: {e.Message}");
                 }
                 break;
         }
@@ -163,7 +171,8 @@ public class GameServer
 
                 recvData = recvData.Remove(0, i + 1);
 
-                NetworkData networkData = new NetworkData(client, ConvertStringToNetworkDataType(type), recvData);
+                ENetworkDataType dataType = (ENetworkDataType)Enum.Parse(typeof(ENetworkDataType), type);
+                NetworkData networkData = new NetworkData(client, dataType, recvData);
 
                 lock (_data)
                 {
@@ -187,6 +196,44 @@ public class GameServer
         }      
     }
 
+    private static async Task SendDataToClientAsync()
+    {
+        Log.PrintToServer($"SendDataToClientAsync Started");   
+
+        while (true)
+        {
+            NetworkData data;
+
+            lock (_sendData)
+            {
+                if (_sendData.Count == 0)
+                {
+                    Task.Delay(100);
+                    continue;
+                }
+
+                data = _sendData.Dequeue();
+            }
+
+            Console.WriteLine($"Data : {data.data}");
+
+            string sendDataStr = $"{data.type},{data.data}";
+            NetworkStream stream = data.client.GetStream();
+
+            try
+            {
+                byte[] buffer = System.Text.Encoding.UTF8.GetBytes(sendDataStr);
+                await stream.WriteAsync(buffer, 0, buffer.Length);
+
+                Log.PrintToDB($"Send To Client {data.type} {data.data} {GetClientIP(data.client)}");
+            }
+            catch(Exception e)
+            {
+                Log.PrintToServer(e.Message);
+            }
+        }
+    }
+
     private static async Task HandleInputAsync(CancellationTokenSource cts)
     {
         while (!cts.Token.IsCancellationRequested)
@@ -203,34 +250,5 @@ public class GameServer
     private static IPAddress GetClientIP(TcpClient client)
     {
         return ((IPEndPoint)client.Client.RemoteEndPoint).Address;
-    }
-
-    private static ENetworkDataType ConvertStringToNetworkDataType(string typeString)
-    {
-        switch (typeString)
-        {
-            case "Login":
-                return ENetworkDataType.Login;
-            case "Register":
-                return ENetworkDataType.Register;
-            case "Buy":
-                return ENetworkDataType.Buy;
-            case "Sell":
-                return ENetworkDataType.Sell;
-            case "Search":
-                return ENetworkDataType.Search;
-            case "Response":
-                return ENetworkDataType.Response;
-            case "Log":
-                return ENetworkDataType.Log;
-            case "Error":
-                return ENetworkDataType.Error;
-            case "Disconnect":
-                return ENetworkDataType.Error;
-            // Invalid Area
-            case "None":
-            default:
-                return ENetworkDataType.None;
-        }
     }
 }

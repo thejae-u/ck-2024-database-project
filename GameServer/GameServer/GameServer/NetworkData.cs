@@ -6,10 +6,10 @@ public enum ENetworkDataType
     None,
     Login,
     Register,
+    Get,
     Buy,
     Sell,
     Search,
-    Response,
     Log,
     Error,
     Disconnect
