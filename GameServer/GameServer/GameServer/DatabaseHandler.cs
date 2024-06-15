@@ -111,15 +111,18 @@ public static class DatabaseHandler
                         switch (table)
                         {
                             case ETableList.item_list:
-                                NetworkData sendData = new NetworkData(query.data.client, ENetworkDataType.Get, "");
+                                List<NetworkData> sendData = new List<NetworkData>();
                                 
                                 while (reader.Read())
                                 {
-                                    sendData.data = $"item_list@{reader["uid"]},{reader["item_name"]},{reader["price"]}";
-                                    lock (GameServer.SendData)
-                                    {
-                                        GameServer.SendData.Enqueue(sendData);
-                                    }
+                                    string data = $"item_list@{reader["uid"]},{reader["item_name"]},{reader["price"]}";
+                                    NetworkData readData = new NetworkData(query.data.client, ENetworkDataType.Get, data);
+                                    sendData.Add(readData);
+                                }
+
+                                foreach(var data in sendData)
+                                {
+                                    GameServer.SendData.Enqueue(data);
                                 }
 
                                 break;

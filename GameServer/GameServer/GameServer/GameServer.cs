@@ -5,18 +5,21 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 
 public class GameServer
 {
     public const int PORT = 56000;
     public const int BUFFER_SIZE = 1024;
 
-    private static readonly Queue<NetworkData> _data = new Queue<NetworkData>();
-    private static readonly Queue<NetworkData> _sendData = new Queue<NetworkData>();
+    //private static readonly Queue<NetworkData> _data = new Queue<NetworkData>();
+    private static readonly ConcurrentQueue<NetworkData> _data = new ConcurrentQueue<NetworkData>();
+    //private static readonly Queue<NetworkData> _sendData = new Queue<NetworkData>();
+    private static readonly ConcurrentQueue<NetworkData> _sendData = new ConcurrentQueue<NetworkData>();
     private static CancellationTokenSource _cts = new CancellationTokenSource();
     private static readonly List<TcpClient> _connectedClients = new List<TcpClient>();
 
-    public static Queue<NetworkData> SendData => _sendData;
+    public static ConcurrentQueue<NetworkData> SendData => _sendData;
     
     private static async Task Main()
     {
@@ -76,16 +79,10 @@ public class GameServer
 
         while (!_cts.Token.IsCancellationRequested)
         {
-            if (_data.Count == 0)
-            {
-                await Task.Delay(10);
-                continue;
-            }
-
             NetworkData networkData;
-            lock (_data)
+            while(!_data.TryDequeue(out networkData))
             {
-                networkData = _data.Dequeue();
+                await Task.Delay(100);
             }
 
             ApplyNetworkRequest(networkData);
@@ -174,10 +171,7 @@ public class GameServer
                 ENetworkDataType dataType = (ENetworkDataType)Enum.Parse(typeof(ENetworkDataType), type);
                 NetworkData networkData = new NetworkData(client, dataType, recvData);
 
-                lock (_data)
-                {
-                    _data.Enqueue(networkData);
-                }
+                _data.Enqueue(networkData);
             }
         }
         catch (Exception e)
@@ -203,16 +197,9 @@ public class GameServer
         while (true)
         {
             NetworkData data;
-
-            lock (_sendData)
+            while (!_sendData.TryDequeue(out data))
             {
-                if (_sendData.Count == 0)
-                {
-                    Task.Delay(100);
-                    continue;
-                }
-
-                data = _sendData.Dequeue();
+                await Task.Delay(100);
             }
 
             Console.WriteLine($"Data : {data.data}");
