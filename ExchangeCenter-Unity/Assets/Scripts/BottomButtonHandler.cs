@@ -42,12 +42,12 @@ public class BottomButtonHandler : MonoBehaviour
             Debug.Log($"No Item Selected");
             return;
         }
-        
-        string[] selectedItems = _selectedItemList.ToArray();
-        string sendData = string.Join(",", selectedItems);
 
-        NetworkData data = new (ENetworkDataType.Buy, sendData);
-        NetworkManager.Instance.Result.EnqueueData(data);
+        foreach (var item in _selectedItemList)
+        {
+            NetworkData data = new (ENetworkDataType.Buy, item);
+            NetworkManager.Instance.Result.EnqueueData(data);
+        }
         
         // TODO : 데이터베이스에서 확인 된 상태를 받아서 처리
         // TODO : 구매가 완료된 아이템에 한하여 인벤토리에 추가

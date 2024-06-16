@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 
 public class NetworkManager : Singleton<NetworkManager>
 {
+    public string CurrentUser { get; private set; }
     public bool IsRunning { get; private set; }
     private bool IsServerStarted { get; set; }
     

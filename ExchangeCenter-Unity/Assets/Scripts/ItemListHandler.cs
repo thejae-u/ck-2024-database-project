@@ -80,7 +80,7 @@ public class ItemListHandler : Singleton<ItemListHandler>
                 GameObject itemInfo = Instantiate(_itemInfoPrefab, itemScrollContent);
                 ItemInfoHandler infoHandler = itemInfo.GetComponent<ItemInfoHandler>();
                 infoHandler.SetItemInfo(item);
-                itemInfo.name = $"{infoHandler.UserID}_{infoHandler.ItemName}";
+                itemInfo.name = $"{infoHandler.UserID}@{infoHandler.ItemName}";
                 
                 _itemList.Add(itemInfo);
                 _itemInfoList.Add(itemInfo.GetComponent<ItemInfoHandler>());
