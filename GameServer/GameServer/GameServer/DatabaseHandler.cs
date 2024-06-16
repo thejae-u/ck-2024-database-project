@@ -115,7 +115,7 @@ public static class DatabaseHandler
                                 
                                 while (reader.Read())
                                 {
-                                    string data = $"item_list@{reader["uid"]},{reader["item_name"]},{reader["price"]}";
+                                    string data = $"item_list@{reader["uid"]},{reader["item"]},{reader["price"]}";
                                     NetworkData readData = new NetworkData(query.data.client, ENetworkDataType.Get, data);
                                     sendData.Add(readData);
                                 }

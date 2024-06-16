@@ -12,9 +12,7 @@ public class GameServer
     public const int PORT = 56000;
     public const int BUFFER_SIZE = 1024;
 
-    //private static readonly Queue<NetworkData> _data = new Queue<NetworkData>();
     private static readonly ConcurrentQueue<NetworkData> _data = new ConcurrentQueue<NetworkData>();
-    //private static readonly Queue<NetworkData> _sendData = new Queue<NetworkData>();
     private static readonly ConcurrentQueue<NetworkData> _sendData = new ConcurrentQueue<NetworkData>();
     private static CancellationTokenSource _cts = new CancellationTokenSource();
     private static readonly List<TcpClient> _connectedClients = new List<TcpClient>();
@@ -206,8 +204,6 @@ public class GameServer
             {
                 await Task.Delay(100);
             }
-
-            Console.WriteLine($"{GetClientIP(data.client)} {data.data}");
 
             string sendDataStr = $"{data.type},{data.data}";
             NetworkStream stream = data.client.GetStream();
