@@ -377,6 +377,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   itemInfoImage: {fileID: 3398853824867832265}
   itemSelectButton: {fileID: 8206733664496002967}
+  itemName: {fileID: 3714310394180377198}
+  itemPrice: {fileID: 3692512818189332443}
 --- !u!114 &7653355034801822099
 MonoBehaviour:
   m_ObjectHideFlags: 0

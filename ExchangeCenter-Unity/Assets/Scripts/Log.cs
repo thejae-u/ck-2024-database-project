@@ -7,6 +7,6 @@ public static class Log
     public static void LogSend(string message)
     {
         NetworkData logData = new (ENetworkDataType.Log, message);
-        NetworkManager.Instance.EnqueueData(logData);
+        NetworkManager.Instance.Result.EnqueueData(logData);
     }
 }

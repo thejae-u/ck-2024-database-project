@@ -1,12 +1,13 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 
 public class Singleton<T> : MonoBehaviour where T : MonoBehaviour
 {
     private static T instance;
 
-    public static T Instance
+    public static Task<T> Instance
     {
         get
         {
@@ -15,7 +16,7 @@ public class Singleton<T> : MonoBehaviour where T : MonoBehaviour
                 Init();
             }
 
-            return instance;
+            return Task.FromResult(instance);
         }
     }
 

@@ -29,7 +29,7 @@ public class BottomButtonHandler : MonoBehaviour
 
     private void OnBuyButtonClick()
     {
-        foreach (var itemInfo in ItemListHandler.Instance.ItemList)
+        foreach (var itemInfo in ItemListHandler.Instance.Result.ItemInfoList)
         {
             if (itemInfo.IsSelected)
             {
@@ -47,7 +47,7 @@ public class BottomButtonHandler : MonoBehaviour
         string sendData = string.Join(",", selectedItems);
 
         NetworkData data = new (ENetworkDataType.Buy, sendData);
-        NetworkManager.Instance.EnqueueData(data);
+        NetworkManager.Instance.Result.EnqueueData(data);
         
         // TODO : 데이터베이스에서 확인 된 상태를 받아서 처리
         // TODO : 구매가 완료된 아이템에 한하여 인벤토리에 추가
@@ -58,7 +58,7 @@ public class BottomButtonHandler : MonoBehaviour
     private void ResetSelectState()
     {
         _selectedItemList.Clear();
-        ItemListHandler.Instance.ItemDeselectAll();
+        ItemListHandler.Instance.Result.ItemDeselectAll();
     }
 
     private void OnSellButtonClick()
