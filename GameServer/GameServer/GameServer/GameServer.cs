@@ -6,11 +6,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
+using System.Linq;
 
 public class GameServer
 {
     public const int PORT = 56000;
     public const int BUFFER_SIZE = 1024;
+
+    private static readonly ConcurrentDictionary<string, int> _connectedUsers = new ConcurrentDictionary<string, int>();
 
     private static readonly ConcurrentQueue<NetworkData> _data = new ConcurrentQueue<NetworkData>();
     private static readonly ConcurrentQueue<NetworkData> _sendData = new ConcurrentQueue<NetworkData>();
@@ -18,7 +21,7 @@ public class GameServer
     private static readonly List<TcpClient> _connectedClients = new List<TcpClient>();
 
     public static ConcurrentQueue<NetworkData> SendData => _sendData;
-    
+
     private static async Task Main()
     {
         AppDomain.CurrentDomain.ProcessExit += new EventHandler(OnExit);
@@ -53,17 +56,17 @@ public class GameServer
         server.Stop();
         Log.PrintToServer("Server Stopped");
     }
-    
+
     private static void OnExit(object sender, EventArgs e)
     {
-        if(_connectedClients.Count == 0)
+        if (_connectedClients.Count == 0)
         {
             return;
         }
 
         Log.PrintToServer("Connection Close");
 
-        foreach(var client in _connectedClients)
+        foreach (var client in _connectedClients)
         {
             // DB has Disconnected -> server Log
             Log.PrintToServer($"{GetClientIP(client)} Disconnected");
@@ -78,7 +81,7 @@ public class GameServer
         while (!_cts.Token.IsCancellationRequested)
         {
             NetworkData networkData;
-            while(!_data.TryDequeue(out networkData))
+            while (!_data.TryDequeue(out networkData))
             {
                 await Task.Delay(100);
             }
@@ -90,29 +93,61 @@ public class GameServer
     private static void ApplyNetworkRequest(NetworkData data)
     {
         Log.PrintToDB($"{GetClientIP(data.client)} : Request Type \'{data.type}\' Request Data \'{data.data}\'");
+        Query query;
+        NetworkData sendData = null;
 
         switch (data.type)
         {
             case ENetworkDataType.Login:
+                if (_connectedUsers.ContainsKey(data.data))
+                {
+                    // Already Exist
+                    // Send To Invalid
+                    sendData = new NetworkData(data.client, ENetworkDataType.Error, "");
+                    Log.PrintToDB($"Login Request Denied {data.data} alread Exist");
+                    SendData.Enqueue(sendData);
+                }
+                else
+                {
+                    // New User Login
+                    // DB Find and Cash Check And Get Cash
+                    // Send To DB Login Request
+                    query = new Query(EQueryType.Login, data.data);
+                    DatabaseHandler.EnqueueQuery(query);
+                    Log.PrintToDB($"Login Request Applied {data.data}");
+                }
                 break;
+
             case ENetworkDataType.Register:
                 break;
+
             case ENetworkDataType.Get:
-                Query query = new Query(data, EQueryType.Get, data.data);
+                query = new Query(data, EQueryType.Get, data.data);
                 DatabaseHandler.EnqueueQuery(query);
                 break;
+
             case ENetworkDataType.Buy:
+                string strData = data.data;
+                string requestUser = "userA";
+                query = new Query(data, EQueryType.Update, requestUser, strData);
+                DatabaseHandler.EnqueueQuery(query);
                 break;
+
             case ENetworkDataType.Sell:
                 break;
+
             case ENetworkDataType.Search:
                 break;
+
             case ENetworkDataType.Log:
                 break;
+
             case ENetworkDataType.Error:
                 break;
+
             case ENetworkDataType.Disconnect:
                 break;
+
             case ENetworkDataType.None:
             default:
                 Log.PrintToDB($"Invalid Type Request from {GetClientIP(data.client)}");
@@ -131,6 +166,11 @@ public class GameServer
                 }
                 break;
         }
+    }
+
+    public static async Task AddConnectUser(string userId, int cash)
+    {
+        await Task.Run(() => _connectedUsers.TryAdd(userId, cash));
     }
 
     private static async Task HandleClientAsync(TcpClient client)
@@ -190,12 +230,12 @@ public class GameServer
 
             stream.Close();
             client.Close();
-        }      
+        }
     }
 
     private static async Task SendDataToClientAsync()
     {
-        Log.PrintToServer($"SendDataToClientAsync Started");   
+        Log.PrintToServer($"SendDataToClientAsync Started");
 
         while (true)
         {
@@ -218,7 +258,7 @@ public class GameServer
 
                 Log.PrintToDB($"Send To Client {data.type} {data.data} {GetClientIP(data.client)}");
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Log.PrintToServer(e.Message);
             }
@@ -227,6 +267,7 @@ public class GameServer
 
     private static async Task HandleInputAsync(CancellationTokenSource cts)
     {
+
         while (!cts.Token.IsCancellationRequested)
         {
             string input = await Task.Run(() => Console.ReadLine());

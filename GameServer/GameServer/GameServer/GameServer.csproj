@@ -96,6 +96,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DatabaseHandler.cs" />
+    <Compile Include="DatabaseTransactions.cs" />
     <Compile Include="GameServer.cs" />
     <Compile Include="Log.cs" />
     <Compile Include="MysqlConnectString.cs" />
