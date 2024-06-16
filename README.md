@@ -6,4 +6,4 @@
 
 ### Requirement
 - `MysqlConnectString.cs`
- - Mysql Connect를 위한 Uid, Pwd string이 있는 파일
+  - Mysql Connect를 위한 Uid, Pwd string이 있는 파일
