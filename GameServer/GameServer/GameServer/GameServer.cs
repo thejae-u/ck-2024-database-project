@@ -6,12 +6,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
-using System.Linq;
 
 public class GameServer
 {
-    public const int PORT = 56000;
-    public const int BUFFER_SIZE = 1024;
+    private const int PORT = 56000;
 
     private static readonly ConcurrentDictionary<string, int> _connectedUsers = new ConcurrentDictionary<string, int>();
 
@@ -21,10 +19,11 @@ public class GameServer
     private static readonly List<TcpClient> _connectedClients = new List<TcpClient>();
 
     public static ConcurrentQueue<NetworkData> SendData => _sendData;
+    public static bool IsRunning => !_cts.Token.IsCancellationRequested;
 
     private static async Task Main()
     {
-        AppDomain.CurrentDomain.ProcessExit += new EventHandler(OnExit);
+        AppDomain.CurrentDomain.ProcessExit += OnExit;
         TcpListener server = new TcpListener(IPAddress.Any, PORT);
         server.Start();
         Log.PrintToServer($"Server Started on {PORT}");
@@ -44,7 +43,7 @@ public class GameServer
             if (server.Pending())
             {
                 TcpClient client = await server.AcceptTcpClientAsync();
-                Log.PrintToDB($"Client {GetClientIP(client)} Connected");
+                Log.PrintToDB($"Client {GetClientIp(client)} Connected");
                 _ = HandleClientAsync(client);
             }
             else
@@ -69,7 +68,7 @@ public class GameServer
         foreach (var client in _connectedClients)
         {
             // DB has Disconnected -> server Log
-            Log.PrintToServer($"{GetClientIP(client)} Disconnected");
+            Log.PrintToServer($"{GetClientIp(client)} Disconnected");
             client.Close();
         }
     }
@@ -92,7 +91,7 @@ public class GameServer
 
     private static void ApplyNetworkRequest(NetworkData data)
     {
-        Log.PrintToDB($"{GetClientIP(data.client)} : Request Type \'{data.type}\' Request Data \'{data.data}\'");
+        Log.PrintToDB($"{GetClientIp(data.client)} : Request Type \'{data.type}\' Request Data \'{data.data}\'");
         Query query;
         NetworkData sendData = null;
 
@@ -128,8 +127,7 @@ public class GameServer
 
             case ENetworkDataType.Buy:
                 string strData = data.data;
-                string requestUser = "userA";
-                query = new Query(data, EQueryType.Update, requestUser, strData);
+                query = new Query(data, EQueryType.Update, strData);
                 DatabaseHandler.EnqueueQuery(query);
                 break;
 
@@ -150,7 +148,7 @@ public class GameServer
 
             case ENetworkDataType.None:
             default:
-                Log.PrintToDB($"Invalid Type Request from {GetClientIP(data.client)}");
+                Log.PrintToDB($"Invalid Type Request from {GetClientIp(data.client)}");
                 try
                 {
                     lock (_connectedClients)
@@ -191,7 +189,7 @@ public class GameServer
 
                 if (lengthRead == 0)
                 {
-                    Log.PrintToDB("Disconnected " + GetClientIP(client));
+                    Log.PrintToDB("Disconnected " + GetClientIp(client));
                     break;
                 }
 
@@ -241,8 +239,8 @@ public class GameServer
         {
             NetworkData data;
             while (!_sendData.TryDequeue(out data))
-            {
                 await Task.Delay(100);
+            {
             }
 
             string sendDataStr = $"{data.type},{data.data}";
@@ -250,13 +248,19 @@ public class GameServer
 
             try
             {
-                byte[] buffer = System.Text.Encoding.UTF8.GetBytes(sendDataStr);
+                byte[] buffer = Encoding.UTF8.GetBytes(sendDataStr);
                 byte[] lengthBuffer = BitConverter.GetBytes(buffer.Length);
 
                 await stream.WriteAsync(lengthBuffer, 0, lengthBuffer.Length);
                 await stream.WriteAsync(buffer, 0, buffer.Length);
 
-                Log.PrintToDB($"Send To Client {data.type} {data.data} {GetClientIP(data.client)}");
+                if (data.type == ENetworkDataType.Get)
+                {
+                    Log.PrintToServer($"Send To Client {data.type} {data.data} {GetClientIp(data.client)}");
+                    continue;
+                }
+                
+                Log.PrintToDB($"Send To Client {data.type} {data.data} {GetClientIp(data.client)}");
             }
             catch (Exception e)
             {
@@ -279,7 +283,7 @@ public class GameServer
         }
     }
 
-    private static IPAddress GetClientIP(TcpClient client)
+    public static IPAddress GetClientIp(TcpClient client)
     {
         return ((IPEndPoint)client.Client.RemoteEndPoint).Address;
     }
