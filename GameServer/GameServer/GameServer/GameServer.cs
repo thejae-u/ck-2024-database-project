@@ -28,18 +28,20 @@ public class GameServer
         server.Start();
         Log.PrintToServer($"Server Started on {PORT}");
 
+        // 서버 Task 시작
         _ = Task.Run(HandleDequeueNetworkData);
-
         _ = Task.Run(() => HandleInputAsync(_cts));
-
         _ = Task.Run(SendDataToClientAsync);
 
+        // DB Task 시작
         DatabaseHandler.Start();
 
         Log.PrintToServer("Client Accept Started");
 
+        // 서버 종료 시그널이 들어올 때 까지 반복
         while (!_cts.Token.IsCancellationRequested)
         {
+            // 클라이언트 연결 대기
             if (server.Pending())
             {
                 TcpClient client = await server.AcceptTcpClientAsync();
@@ -56,11 +58,15 @@ public class GameServer
         Log.PrintToServer("Server Stopped");
     }
 
+    // 서버 종료 시 연결 되어있는 클라이언트 모두 해제
     private static void OnExit(object sender, EventArgs e)
     {
-        if (_connectedClients.Count == 0)
+        lock (_connectedClients)
         {
-            return;
+            if (_connectedClients.Count == 0)
+            {
+                return;
+            }
         }
 
         Log.PrintToServer("Connection Close");
@@ -73,6 +79,9 @@ public class GameServer
         }
     }
 
+    /// <summary>
+    /// 네트워크로 들어온 데이터를 처리하는 핸들러
+    /// </summary>
     private static async Task HandleDequeueNetworkData()
     {
         Log.PrintToServer("DequeueHandler Started");
@@ -89,6 +98,9 @@ public class GameServer
         }
     }
 
+    /// <summary>
+    /// 네트워크로 들어온 데이터를 적용하는 핸들러
+    /// </summary>
     private static void ApplyNetworkRequest(NetworkData data)
     {
         Log.PrintToDB($"{GetClientIp(data.client)} : Request Type \'{data.type}\' Request Data \'{data.data}\'");
@@ -166,11 +178,17 @@ public class GameServer
         }
     }
 
+    /// <summary>
+    /// 유저 접속 시 유저 정보를 추가하는 함수
+    /// </summary>
     public static async Task AddConnectUser(string userId, int cash)
     {
         await Task.Run(() => _connectedUsers.TryAdd(userId, cash));
     }
 
+    /// <summary>
+    /// 클라이언트의 요청을 처리하는 함수
+    /// </summary>
     private static async Task HandleClientAsync(TcpClient client)
     {
         lock (_connectedClients)
@@ -231,6 +249,9 @@ public class GameServer
         }
     }
 
+    /// <summary>
+    /// 클라이언트로 데이터를 전송하는 함수
+    /// </summary>
     private static async Task SendDataToClientAsync()
     {
         Log.PrintToServer($"SendDataToClientAsync Started");
@@ -269,6 +290,9 @@ public class GameServer
         }
     }
 
+    /// <summary>
+    /// Exit 입력 시 종료
+    /// </summary>
     private static async Task HandleInputAsync(CancellationTokenSource cts)
     {
 
@@ -283,6 +307,9 @@ public class GameServer
         }
     }
 
+    /// <summary>
+    /// 클라이언트의 IP 주소를 반환하는 함수
+    /// </summary>
     public static IPAddress GetClientIp(TcpClient client)
     {
         return ((IPEndPoint)client.Client.RemoteEndPoint).Address;

@@ -109,6 +109,7 @@ public static class DatabaseTransactions
             else
             {
                 await tr.RollbackAsync();
+                Log.PrintToDB($"Exchange by {buyUserId} Failed - Not Enough Cash");
             }
 
         }
@@ -122,7 +123,6 @@ public static class DatabaseTransactions
             // 테이블 언락
             cmd.CommandText = "UNLOCK TABLES";
             await cmd.ExecuteNonQueryAsync();
-            await cmd.DisposeAsync();
         }
     }
 
@@ -163,7 +163,6 @@ public static class DatabaseTransactions
                         GameServer.SendData.Enqueue(data);
                     }
 
-                    _sendDataList.Clear();
                     break;
 
                 case ETableList.userinfo: // 유저 정보 조회
@@ -178,7 +177,6 @@ public static class DatabaseTransactions
                     {
                         GameServer.SendData.Enqueue(data);
                     }
-
                     break;
                 
                 case ETableList.log: // 로그 조회
@@ -208,10 +206,11 @@ public static class DatabaseTransactions
         }
         finally
         {
+            _sendDataList.Clear();
+            
             // 테이블 언락
             cmd.CommandText = "UNLOCK TABLES";
             await cmd.ExecuteNonQueryAsync();
-            await cmd.DisposeAsync();
         }
     }
 
@@ -221,7 +220,6 @@ public static class DatabaseTransactions
     public static async Task AddLogTransaction(MySqlConnection conn, Query query)
     {
         MySqlCommand cmd = conn.CreateCommand();
-
         try
         {
             // 테이블 락
@@ -231,7 +229,7 @@ public static class DatabaseTransactions
             // 로그 저장
             cmd.CommandText = "INSERT INTO log (message) values(@message)";
             cmd.Parameters.AddWithValue("@message", query.queryMessage);
-            await cmd.ExecuteNonQueryAsync();
+            cmd.ExecuteNonQuery();
         }
         catch (Exception e)
         {
@@ -242,7 +240,6 @@ public static class DatabaseTransactions
             // 테이블 언락
             cmd.CommandText = "UNLOCK TABLES";
             await cmd.ExecuteNonQueryAsync();
-            await cmd.DisposeAsync();
         }
     }
 
@@ -289,7 +286,6 @@ public static class DatabaseTransactions
             // 테이블 언락
             cmd.CommandText = "UNLOCK TABLES";
             await cmd.ExecuteNonQueryAsync();
-            await cmd.DisposeAsync();
         }
         
         GameServer.SendData.Enqueue(sendData);

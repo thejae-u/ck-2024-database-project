@@ -54,6 +54,7 @@ public static class DatabaseHandler
 
     public static void Start()
     {
+        // 쿼리 실행 Task 시작
         _ = Task.Run(ExecuteQuery);
     }
 
@@ -69,16 +70,19 @@ public static class DatabaseHandler
 
         Log.PrintToServer("Database Connected And Wait Query");
 
-        Query query;
         while (GameServer.IsRunning)
         {
+            Query query;
+            // 쿼리가 들어있는 Queue에서 쿼리 Dequeue
             while (!queries.TryDequeue(out query))
             {
+                // 쿼리가 없으면 대기
                 await Task.Delay(100);
             }
 
             try
             {
+                // 쿼리 타입에 따라 트랜잭션 실행
                 switch (query.queryType)
                 {
                     case EQueryType.Log:
@@ -90,11 +94,9 @@ public static class DatabaseHandler
                         break;
 
                     case EQueryType.Update:
-                        // 아이템 구매 트랜잭션
                         await DatabaseTransactions.ExecuteExchangeTransaction(_conn, query);
                         break; 
                     case EQueryType.Get:
-                        // 테이블 조회 트랜잭션
                         await DatabaseTransactions.GetTableTransaction(_conn, query);
                         break;
                     case EQueryType.None:
