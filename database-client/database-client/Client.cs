@@ -1,19 +1,19 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using System.Threading.Tasks;
+using NetworkDataDLL;
 
 public static class DatabaseClient
 {
-    private static readonly List<string> _itemList = new();
-    private static bool _isRunning = false;
     private static readonly string SERVER_DOMAIN = "jaeu.iptime.org";
     private static readonly int PORT = 56000;
     
     private static TcpClient _client;
     private static NetworkStream _stream;
+    
+    private static bool _isRunning;
+    private static bool _isConnected;
     
     private static async Task Main()
     {
@@ -63,7 +63,7 @@ public static class DatabaseClient
         }
         catch (Exception e)
         {
-            Console.WriteLine($"Failed to connect to server: {e.Message}");
+            Console.WriteLine($"Failed to connect to server");
             return false;
         }
 
@@ -78,7 +78,7 @@ public static class DatabaseClient
         Console.WriteLine($"2. Buy Item");
         Console.WriteLine($"3. User List");
         Console.WriteLine($"4. Log");
-        Console.WriteLine($"5. ");
+        Console.WriteLine($"5. Sell Item");
         Console.WriteLine($"0. Exit");
         return Task.CompletedTask;
     }
@@ -89,15 +89,24 @@ public static class DatabaseClient
         
         while (_isRunning)
         {
+            // 길이를 먼저 받음
             byte[] lengthBuffer = new byte[4];
-            await _stream.ReadAsync(lengthBuffer, 0, lengthBuffer.Length);
+            int lengthRead = await _stream.ReadAsync(lengthBuffer, 0, lengthBuffer.Length);
+            if (lengthRead == 0)
+            {
+                Console.WriteLine($"Server Disconnected");
+                _isRunning = false;
+                continue;
+            }
+            
             int length = BitConverter.ToInt32(lengthBuffer, 0);
             
+            // 데이터를 받음
             byte[] buffer = new byte[length];
-            await _stream.ReadAsync(buffer, 0, buffer.Length);
-            string data = Encoding.UTF8.GetString(buffer);
-            
-            Console.WriteLine($"Received Data: {data}");
+            int bytesRead = await _stream.ReadAsync(buffer, 0, buffer.Length);
+
+            NetworkData networkData = NetworkData.Deserialize(buffer, bytesRead);
+            Console.WriteLine($"{networkData.type}, {networkData.data}");
         }
         
         Console.WriteLine($"Receive Async Disabled");
@@ -151,11 +160,14 @@ public static class DatabaseClient
             case 2: // Buy Item
                 networkData = NetworkFunctions.DisplayBuyItemAndGetNetworkDataOrNull();
                 break;
-            case 3:
+            case 3: // Display User List
                 networkData = NetworkFunctions.GetUserInfoNetworkData();
                 break;
-            case 4:
+            case 4: // Display Log To Server
                 networkData = NetworkFunctions.GetLogNetworkData();
+                break;
+            case 5: // Sell Item
+                networkData = NetworkFunctions.GetSellNetworkDataOrNull();
                 break;
             case 0:
                 _isRunning = false;
@@ -175,13 +187,21 @@ public static class DatabaseClient
             return;
         }
 
-        string dataStr = $"{networkData.type},{networkData.data}";
-        byte[] lengthBuffer = BitConverter.GetBytes(dataStr.Length);
-        byte[] buffer = Encoding.UTF8.GetBytes(dataStr);
+        try
+        {
+            string dataStr = NetworkData.Serialize(networkData);
 
-        // Send Length First
-        await _stream.WriteAsync(lengthBuffer, 0, lengthBuffer.Length);
-        // Send Data Second
-        await _stream.WriteAsync(buffer, 0, buffer.Length);
+            byte[] lengthBuffer = BitConverter.GetBytes(dataStr.Length);
+            byte[] buffer = Encoding.UTF8.GetBytes(dataStr);
+
+            // Send Length First
+            await _stream.WriteAsync(lengthBuffer, 0, lengthBuffer.Length);
+            // Send Data Second
+            await _stream.WriteAsync(buffer, 0, buffer.Length);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"{e.Message}");
+        }
     }
 }
