@@ -91,7 +91,7 @@ public static class DatabaseClient
         {
             // 길이를 먼저 받음
             byte[] lengthBuffer = new byte[4];
-            int lengthRead = await _stream.ReadAsync(lengthBuffer, 0, lengthBuffer.Length);
+            int lengthRead = await _stream.ReadAsync(lengthBuffer);
             if (lengthRead == 0)
             {
                 Console.WriteLine($"Server Disconnected");
@@ -103,7 +103,7 @@ public static class DatabaseClient
             
             // 데이터를 받음
             byte[] buffer = new byte[length];
-            int bytesRead = await _stream.ReadAsync(buffer, 0, buffer.Length);
+            int bytesRead = await _stream.ReadAsync(buffer);
 
             NetworkData networkData = NetworkData.Deserialize(buffer, bytesRead);
             Console.WriteLine($"{networkData.type}, {networkData.data}");
