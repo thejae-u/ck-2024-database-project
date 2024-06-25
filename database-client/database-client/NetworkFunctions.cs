@@ -66,4 +66,11 @@ public class NetworkFunctions
         NetworkData networkData = new NetworkData(ENetworkDataType.Sell, dataStr);
         return networkData;
     }
+    
+    public static NetworkData GetUserItemListNetworkData()
+    {
+        string dataStr = ETableList.user_item.ToString();
+        NetworkData networkData = new NetworkData(ENetworkDataType.Get, dataStr);
+        return networkData;
+    }
 }

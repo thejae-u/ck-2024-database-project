@@ -55,7 +55,7 @@ public static class DatabaseTransactions
             {
                 Log.PrintToDB($"{GameServer.GetClientIp(query.data.client)} Invalid User Id Request");
                 await tr.RollbackAsync();
-                return;
+                throw new Exception("Invalid User Id Request");
             }
 
             // 아이템의 정보가 유효한지 확인
@@ -66,7 +66,7 @@ public static class DatabaseTransactions
             {
                 Log.PrintToDB($"Exchange by {buyUserId} Failed - Invalid Item");
                 await tr.RollbackAsync();
-                return;
+                throw new Exception("Invalid Item");
             }
 
             // 요청자와 판매자가 다른지 확인 (자기 자신에게 거래 요청 불가)
@@ -74,7 +74,7 @@ public static class DatabaseTransactions
             {
                 Log.PrintToDB($"Exchange by {buyUserId} Failed - Same User Request");
                 await tr.RollbackAsync();
-                return;
+                throw new Exception("Same User Request");
             }
 
             // 요청자 잔액 저장
@@ -106,16 +106,22 @@ public static class DatabaseTransactions
                 await tr.CommitAsync();
                 Log.PrintToDB(
                     $"Exchange Success {itemName} - Buy : {buyUserId}, Sell : {sellUserId}, Price : {sellPrice}");
+                
+                // 거래 성공 메시지 전송
+                NetworkData sendData = new NetworkData(query.data.client, ENetworkDataType.Buy, "Exchange Success");
+                GameServer.SendData.Enqueue(sendData);
             }
             else
             {
                 await tr.RollbackAsync();
                 Log.PrintToDB($"Exchange by {buyUserId} Failed - Not Enough Cash");
+                throw new Exception("Not Enough Cash");
             }
 
         }
         catch (Exception e)
         {
+            GameServer.SendData.Enqueue(new NetworkData(query.data.client, ENetworkDataType.Error, e.Message));
             await tr.RollbackAsync();
             Log.PrintToServer(e.Message);
         }
@@ -194,6 +200,21 @@ public static class DatabaseTransactions
                     }
 
                     break;
+                
+                case ETableList.user_item:
+                    while (reader.Read())
+                    {
+                        string data = $"user_item@{reader["item_name"]},{reader["uid"]}";
+                        NetworkData readData = new NetworkData(query.data.client, ENetworkDataType.Get, data);
+                        _sendDataList.Add(readData);
+                    }
+
+                    foreach (var data in _sendDataList)
+                    {
+                        GameServer.SendData.Enqueue(data);
+                    }
+                    break;
+                
                 default:
                     Log.PrintToServer("Invalid Query " + query.queryMessage);
                     break;
@@ -330,7 +351,7 @@ public static class DatabaseTransactions
         try
         {
             // 테이블 락
-            cmd.CommandText = $"LOCK TABLES item_list WRITE, userinfo WRITE";
+            cmd.CommandText = $"LOCK TABLES item_list WRITE, userinfo WRITE, user_item WRITE";
             cmd.ExecuteNonQuery();
 
             // 판매자 정보가 유효한지 확인
@@ -340,16 +361,28 @@ public static class DatabaseTransactions
             {
                 Log.PrintToDB($"{GameServer.GetClientIp(query.data.client)} Invalid User Id Request");
                 await tr.RollbackAsync();
+                GameServer.SendData.Enqueue(new NetworkData(query.data.client, ENetworkDataType.Error, "Sell Failed"));
+                return;
+            }
+            
+            // 아이템이 유효한지 확인
+            cmd.CommandText = $"SELECT * FROM user_item WHERE item_name = @item_name AND uid = @user_id_sell";
+            cmd.Parameters.AddWithValue("@item_name", itemName);
+            if (await cmd.ExecuteScalarAsync() == null)
+            {
+                Log.PrintToDB($"Sell by {sellUserId} Failed - Invalid Item");
+                await tr.RollbackAsync();
+                GameServer.SendData.Enqueue(new NetworkData(query.data.client, ENetworkDataType.Error, "Sell Failed"));
                 return;
             }
 
             // 아이템이 이미 등록되어 있는지 확인
             cmd.CommandText = $"SELECT item FROM item_list WHERE item = @item_name AND uid = @user_id_sell";
-            cmd.Parameters.AddWithValue("@item_name", itemName);
             if (await cmd.ExecuteScalarAsync() != null)
             {
                 Log.PrintToDB($"Sell by {sellUserId} Failed - Already Registered Item");
                 await tr.RollbackAsync();
+                GameServer.SendData.Enqueue(new NetworkData(query.data.client, ENetworkDataType.Error, "Sell Failed"));
                 return;
             }
 
@@ -360,9 +393,14 @@ public static class DatabaseTransactions
 
             await tr.CommitAsync();
             Log.PrintToDB($"Sell Success {itemName} - Sell : {sellUserId}, Price : {price}");
+            
+            // 판매 성공 메시지 전송
+            NetworkData sendData = new NetworkData(query.data.client, ENetworkDataType.Sell, "Sell Success");
+            GameServer.SendData.Enqueue(sendData);
         }
         catch (Exception e)
         {
+            GameServer.SendData.Enqueue(new NetworkData(query.data.client, ENetworkDataType.Error, "Sell Failed"));
             await tr.RollbackAsync();
             Log.PrintToServer(e.Message);
         }

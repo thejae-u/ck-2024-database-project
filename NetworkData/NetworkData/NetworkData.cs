@@ -25,7 +25,8 @@ public enum ETableList
 {
     item_list,
     userinfo,
-    log
+    log,
+    user_item
 }
 
 [Serializable]

@@ -79,6 +79,7 @@ public static class DatabaseClient
         Console.WriteLine($"3. User List");
         Console.WriteLine($"4. Log");
         Console.WriteLine($"5. Sell Item");
+        Console.WriteLine($"6. User Item List");
         Console.WriteLine($"0. Exit");
         return Task.CompletedTask;
     }
@@ -168,6 +169,9 @@ public static class DatabaseClient
                 break;
             case 5: // Sell Item
                 networkData = NetworkFunctions.GetSellNetworkDataOrNull();
+                break;
+            case 6:
+                networkData = NetworkFunctions.GetUserItemListNetworkData();
                 break;
             case 0:
                 _isRunning = false;
