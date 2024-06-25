@@ -6,8 +6,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
+using NetworkDataDLL;
 
-public class GameServer
+public static class GameServer
 {
     private const int PORT = 56000;
 
@@ -199,7 +200,7 @@ public class GameServer
     }
 
     /// <summary>
-    /// 클라이언트의 요청을 처리하는 함수
+    /// 클라이언트의 접속 및 요청을 처리하는 함수
     /// </summary>
     private static async Task HandleClientAsync(TcpClient client)
     {
@@ -227,20 +228,16 @@ public class GameServer
                 byte[] buffer = new byte[dataLength];
 
                 int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
-
                 string recvData = Encoding.UTF8.GetString(buffer, 0, bytesRead);
-                string type = "";
-
-                int i = 0;
-                while (recvData[i] != ',')
+                
+                NetworkData networkData = NetworkData.DeserializeJsonToNetworkDataOrNull(recvData);
+                if (networkData == null)
                 {
-                    type += recvData[i++];
+                    Log.PrintToDB($"Received Invalid Data Format From {GetClientIp(client)}");
+                    continue;
                 }
 
-                recvData = recvData.Remove(0, i + 1);
-
-                ENetworkDataType dataType = (ENetworkDataType)Enum.Parse(typeof(ENetworkDataType), type);
-                NetworkData networkData = new NetworkData(client, dataType, recvData);
+                networkData.client = client;
 
                 _data.Enqueue(networkData);
             }
@@ -272,11 +269,11 @@ public class GameServer
         {
             NetworkData data;
             while (!_sendData.TryDequeue(out data))
-                await Task.Delay(100);
             {
+                await Task.Delay(100);
             }
 
-            string sendDataStr = $"{data.type},{data.data}";
+            string sendDataStr = NetworkData.SerializeNetworkDataToJson(data);
             NetworkStream stream = data.client.GetStream();
 
             try
@@ -284,6 +281,7 @@ public class GameServer
                 byte[] buffer = Encoding.UTF8.GetBytes(sendDataStr);
                 byte[] lengthBuffer = BitConverter.GetBytes(buffer.Length);
 
+                // 데이터 전송 시 데이터 길이를 먼저 전송
                 await stream.WriteAsync(lengthBuffer, 0, lengthBuffer.Length);
                 await stream.WriteAsync(buffer, 0, buffer.Length);
 

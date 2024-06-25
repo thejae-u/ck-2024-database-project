@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using MySql.Data.MySqlClient;
+using NetworkDataDLL;
 
 public static class DatabaseTransactions
 {

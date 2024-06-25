@@ -7,13 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using MySql.Data.MySqlClient;
-
-public enum ETableList
-{
-    item_list,
-    userinfo,
-    log
-}
+using NetworkDataDLL;
 
 public enum EQueryType
 {
@@ -26,9 +20,9 @@ public enum EQueryType
 
 public class Query
 {
-    public NetworkData data;
-    public EQueryType queryType;
-    public string queryMessage;
+    public readonly NetworkData? data;
+    public readonly EQueryType queryType;
+    public readonly string queryMessage;
 
     public Query(EQueryType queryType, string queryMessage)
     {
