@@ -50,8 +50,6 @@ public static class DatabaseHandler
 
     private static MySqlConnection _conn = new MySqlConnection(MysqlConnectString.STR_CONN);
 
-    private static readonly List<NetworkData> _sendDataList = new List<NetworkData>();
-
     public static void Start()
     {
         // 쿼리 실행 Task 시작

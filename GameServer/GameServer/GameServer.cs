@@ -67,15 +67,16 @@ public class GameServer
             {
                 return;
             }
-        }
 
-        Log.PrintToServer("Connection Close");
 
-        foreach (var client in _connectedClients)
-        {
-            // DB has Disconnected -> server Log
-            Log.PrintToServer($"{GetClientIp(client)} Disconnected");
-            client.Close();
+            Log.PrintToServer("Connection Close");
+
+            foreach (var client in _connectedClients)
+            {
+                // DB has Disconnected -> server Log
+                Log.PrintToServer($"{GetClientIp(client)} Disconnected");
+                client.Close();
+            }
         }
     }
 
@@ -94,14 +95,14 @@ public class GameServer
                 await Task.Delay(100);
             }
 
-            ApplyNetworkRequest(networkData);
+            await ApplyNetworkRequest(networkData);
         }
     }
 
     /// <summary>
     /// 네트워크로 들어온 데이터를 적용하는 핸들러
     /// </summary>
-    private static void ApplyNetworkRequest(NetworkData data)
+    private static async Task ApplyNetworkRequest(NetworkData data)
     {
         Log.PrintToDB($"{GetClientIp(data.client)} : Request Type \'{data.type}\' Request Data \'{data.data}\'");
         Query query;
@@ -156,6 +157,17 @@ public class GameServer
                 break;
 
             case ENetworkDataType.Disconnect:
+                if (_connectedUsers.ContainsKey(data.data))
+                {
+                    while (!_connectedUsers.TryRemove(data.data, out int cash))
+                    {
+                        await Task.Delay(100);
+                    }
+                }
+                else
+                {
+                    Log.PrintToDB($"Invalid Disconnect Request from {GetClientIp(data.client)}");
+                }
                 break;
 
             case ENetworkDataType.None:
