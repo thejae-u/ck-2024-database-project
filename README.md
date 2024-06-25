@@ -7,3 +7,6 @@
 ### Requirement
 - `MysqlConnectString.cs`
   - Mysql Connect를 위한 Uid, Pwd string이 있는 파일
+- `NetworkData.dll`
+  - NetworkData로 직렬화 및 역직렬화를 위한 파일
+  - NetworkData 프로젝트로 빌드 후 각 프로젝트에 `dll` 참조
