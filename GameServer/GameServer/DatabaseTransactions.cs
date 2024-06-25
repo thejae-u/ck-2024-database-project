@@ -46,7 +46,7 @@ public static class DatabaseTransactions
         {
             // 테이블 락
             cmd.CommandText = $"LOCK TABLES userinfo WRITE, item_list WRITE";
-            await cmd.ExecuteNonQueryAsync();
+            cmd.ExecuteNonQuery();
 
             // 요청자의 정보가 유효한지 확인
             cmd.CommandText = $"SELECT uid FROM userinfo WHERE uid = @user_id_buy";
@@ -123,7 +123,7 @@ public static class DatabaseTransactions
         {
             // 테이블 언락
             cmd.CommandText = "UNLOCK TABLES";
-            await cmd.ExecuteNonQueryAsync();
+            cmd.ExecuteNonQuery();
         }
     }
 
@@ -138,7 +138,7 @@ public static class DatabaseTransactions
         {
             // 테이블 락
             cmd.CommandText = $"LOCK TABLES {query.queryMessage} READ";
-            await cmd.ExecuteNonQueryAsync();
+            cmd.ExecuteNonQuery();
             
             // 조회할 테이블 파싱
             ETableList tableToGet = (ETableList)Enum.Parse(typeof(ETableList), query.queryMessage);
@@ -211,7 +211,7 @@ public static class DatabaseTransactions
             
             // 테이블 언락
             cmd.CommandText = "UNLOCK TABLES";
-            await cmd.ExecuteNonQueryAsync();
+            cmd.ExecuteNonQuery();
         }
     }
 
@@ -225,7 +225,7 @@ public static class DatabaseTransactions
         {
             // 테이블 락
             cmd.CommandText = "LOCK TABLES log WRITE";
-            await cmd.ExecuteNonQueryAsync();
+            cmd.ExecuteNonQuery();
 
             // 로그 저장
             cmd.CommandText = "INSERT INTO log (message) values(@message)";
@@ -240,7 +240,7 @@ public static class DatabaseTransactions
         {
             // 테이블 언락
             cmd.CommandText = "UNLOCK TABLES";
-            await cmd.ExecuteNonQueryAsync();
+            cmd.ExecuteNonQuery();
         }
     }
 
@@ -256,7 +256,7 @@ public static class DatabaseTransactions
         {
             // 테이블 락
             cmd.CommandText = "LOCK TABLES userinfo READ";
-            await cmd.ExecuteNonQueryAsync();
+            cmd.ExecuteNonQuery();
 
             // 로그인 요청자 정보 조회
             cmd.CommandText = "SELECT * FROM userinfo WHERE uid = @userId";
@@ -286,9 +286,91 @@ public static class DatabaseTransactions
         {
             // 테이블 언락
             cmd.CommandText = "UNLOCK TABLES";
-            await cmd.ExecuteNonQueryAsync();
+            cmd.ExecuteNonQuery();
         }
         
         GameServer.SendData.Enqueue(sendData);
+    }
+
+
+    /// <summary>
+    /// 아이템 판매 등록 트랜잭션
+    /// </summary>
+    public static async Task ExecuteSellTransaction(MySqlConnection conn, Query query)
+    {
+        MySqlCommand cmd = conn.CreateCommand();
+        MySqlTransaction tr = await conn.BeginTransactionAsync();
+
+        cmd.Connection = conn;
+        cmd.Transaction = tr;
+
+        // Split Query message
+        int i = 0;
+        string sellUserId = string.Empty;
+        string itemName = string.Empty;
+        string price = string.Empty;
+
+        // 트랜잭션 시작 전 쿼리 메시지 파싱
+        while (query.queryMessage[i] != '@')
+        {
+            sellUserId += query.queryMessage[i++];
+        }
+
+        string itemNameWithPrice = query.queryMessage.Remove(0, i + 1);
+
+        i = 0;
+        while (itemNameWithPrice[i] != ',')
+        {
+            itemName += itemNameWithPrice[i++];
+        }
+
+        price = itemNameWithPrice.Remove(0, i + 1);
+
+        // 트랜잭션 시작
+        try
+        {
+            // 테이블 락
+            cmd.CommandText = $"LOCK TABLES item_list WRITE, userinfo WRITE";
+            cmd.ExecuteNonQuery();
+
+            // 판매자 정보가 유효한지 확인
+            cmd.CommandText = $"SELECT uid FROM userinfo WHERE uid = @user_id_sell";
+            cmd.Parameters.AddWithValue("@user_id_sell", sellUserId);
+            if (await cmd.ExecuteScalarAsync() == null)
+            {
+                Log.PrintToDB($"{GameServer.GetClientIp(query.data.client)} Invalid User Id Request");
+                await tr.RollbackAsync();
+                return;
+            }
+
+            // 아이템이 이미 등록되어 있는지 확인
+            cmd.CommandText = $"SELECT item FROM item_list WHERE item = @item_name AND uid = @user_id_sell";
+            cmd.Parameters.AddWithValue("@item_name", itemName);
+            if (await cmd.ExecuteScalarAsync() != null)
+            {
+                Log.PrintToDB($"Sell by {sellUserId} Failed - Already Registered Item");
+                await tr.RollbackAsync();
+                return;
+            }
+
+            // 아이템 등록
+            cmd.CommandText = $"INSERT INTO item_list (uid, item, price) values(@user_id_sell, @item_name, @price)";
+            cmd.Parameters.AddWithValue("@price", price);
+            await cmd.ExecuteNonQueryAsync();
+
+            await tr.CommitAsync();
+            Log.PrintToDB($"Sell Success {itemName} - Sell : {sellUserId}, Price : {price}");
+        }
+        catch (Exception e)
+        {
+            await tr.RollbackAsync();
+            Log.PrintToServer(e.Message);
+        }
+        finally
+        {
+            // 테이블 언락
+            cmd.CommandText = "UNLOCK TABLES";
+            cmd.ExecuteNonQuery();
+        }
     }
 }

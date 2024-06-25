@@ -14,7 +14,8 @@ public enum EQueryType
     None,
     Login,
     Log,
-    Update,
+    Buy,
+    Sell,
     Get
 }
 
@@ -84,10 +85,12 @@ public static class DatabaseHandler
                     case EQueryType.Login:
                         await DatabaseTransactions.LoginTransaction(_conn, query);
                         break;
-
-                    case EQueryType.Update:
+                    case EQueryType.Buy:
                         await DatabaseTransactions.ExecuteExchangeTransaction(_conn, query);
                         break; 
+                    case EQueryType.Sell:
+                        await DatabaseTransactions.ExecuteSellTransaction(_conn, query);
+                        break;
                     case EQueryType.Get:
                         await DatabaseTransactions.GetTableTransaction(_conn, query);
                         break;

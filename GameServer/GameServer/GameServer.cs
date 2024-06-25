@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using NetworkDataDLL;
 
 public static class GameServer
@@ -134,18 +135,19 @@ public static class GameServer
             case ENetworkDataType.Register:
                 break;
 
-            case ENetworkDataType.Get:
+            case ENetworkDataType.Get: // Query Message : table_name
                 query = new Query(data, EQueryType.Get, data.data);
                 DatabaseHandler.EnqueueQuery(query);
                 break;
 
-            case ENetworkDataType.Buy:
-                string strData = data.data;
-                query = new Query(data, EQueryType.Update, strData);
+            case ENetworkDataType.Buy: // Query Message : uid@item_name
+                query = new Query(data, EQueryType.Buy, data.data);
                 DatabaseHandler.EnqueueQuery(query);
                 break;
 
-            case ENetworkDataType.Sell:
+            case ENetworkDataType.Sell: // Query Message : uid@item_name,price
+                query = new Query(data, EQueryType.Sell, data.data);
+                DatabaseHandler.EnqueueQuery(query);
                 break;
 
             case ENetworkDataType.Search:
@@ -217,28 +219,21 @@ public static class GameServer
             {
                 byte[] lengthBuffer = new byte[4];
                 int lengthRead = await stream.ReadAsync(lengthBuffer, 0, lengthBuffer.Length);
-
                 if (lengthRead == 0)
                 {
                     Log.PrintToDB("Disconnected " + GetClientIp(client));
                     break;
                 }
-
+                
                 int dataLength = BitConverter.ToInt32(lengthBuffer, 0);
                 byte[] buffer = new byte[dataLength];
-
-                int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
-                string recvData = Encoding.UTF8.GetString(buffer, 0, bytesRead);
                 
-                NetworkData networkData = NetworkData.DeserializeJsonToNetworkDataOrNull(recvData);
-                if (networkData == null)
-                {
-                    Log.PrintToDB($"Received Invalid Data Format From {GetClientIp(client)}");
-                    continue;
-                }
-
+                
+                int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
+                
+                NetworkData networkData = NetworkData.Deserialize(buffer, bytesRead);
                 networkData.client = client;
-
+                
                 _data.Enqueue(networkData);
             }
         }
@@ -267,13 +262,14 @@ public static class GameServer
 
         while (true)
         {
-            NetworkData data;
+            NetworkData? data;
             while (!_sendData.TryDequeue(out data))
             {
                 await Task.Delay(100);
             }
-
-            string sendDataStr = NetworkData.SerializeNetworkDataToJson(data);
+            
+            Debug.Assert(data.client != null, "data.client != null");
+            string sendDataStr = NetworkData.Serialize(data);
             NetworkStream stream = data.client.GetStream();
 
             try
