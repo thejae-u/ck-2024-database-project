@@ -1,0 +1,26 @@
+use ck_exchange_center;
+
+truncate item_list;
+
+insert into item_list values('Sword', 3000, 'userA');
+insert into item_list values('GunA', 10000, 'userB');
+insert into item_list values('GunExtra', 8000, 'userD');
+insert into item_list values('SpecialGun', 80000, 'userD');
+insert into item_list values('LegendSword', 100000, 'userF');
+insert into item_list values('HP_Potion', 3000, 'userC');
+insert into item_list values('EXP_Potion', 10000, 'userA');
+insert into item_list values('LegendWing', 250000, 'userD');
+insert into item_list values('Rock', 1000, 'userH');
+insert into item_list values('LegendBoxKey', 55000, 'userH');
+insert into item_list values('NormalBoxKey', 15000, 'userG');
+insert into item_list values('NormalBoxKey', 16000, 'userF');
+insert into item_list values('HP_Potion', 3200, 'userF');
+insert into item_list values('TeleportScroll', 1500, 'userA');
+insert into item_list values('HandWeaponEnhanceScroll', 50000, 'userB');
+insert into item_list values('BodyArmorEnhanceScroll', 30000, 'userB');
+insert into item_list values('NormalAmmo', 1000, 'userG');
+insert into item_list values('SepcialAmmo', 1500, 'userD');
+insert into item_list values('LegendAmmo', 3000, 'userE');
+insert into item_list values('SepcialAmmo', 1200, 'userA');
+
+select * from item_list;

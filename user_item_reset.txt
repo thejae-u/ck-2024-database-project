@@ -1,0 +1,26 @@
+use ck_exchange_center;
+
+truncate user_item;
+
+insert into user_item values('Sword', 'userA');
+insert into user_item values('GunA', 'userB');
+insert into user_item values('GunExtra', 'userD');
+insert into user_item values('SpecialGun', 'userD');
+insert into user_item values('LegendSword', 'userF');
+insert into user_item values('HP_Potion', 'userC');
+insert into user_item values('EXP_Potion', 'userA');
+insert into user_item values('LegendWing', 'userD');
+insert into user_item values('Rock', 'userH');
+insert into user_item values('LegendBoxKey', 'userH');
+insert into user_item values('NormalBoxKey', 'userG');
+insert into user_item values('NormalBoxKey', 'userF');
+insert into user_item values('HP_Potion', 'userF');
+insert into user_item values('TeleportScroll', 'userA');
+insert into user_item values('HandWeaponEnhanceScroll', 'userB');
+insert into user_item values('BodyArmorEnhanceScroll', 'userB');
+insert into user_item values('NormalAmmo', 'userG');
+insert into user_item values('SepcialAmmo', 'userD');
+insert into user_item values('LegendAmmo', 'userE');
+insert into user_item values('SepcialAmmo', 'userA');
+
+select * from user_item;

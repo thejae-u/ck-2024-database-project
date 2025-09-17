@@ -1,0 +1,12 @@
+use ck_exchange_center;
+
+update userinfo set cash=50000 where uid='userA';
+update userinfo set cash=100000 where uid='userB';
+update userinfo set cash=80000 where uid='userC';
+update userinfo set cash=120000 where uid='userD';
+update userinfo set cash=500000 where uid='userE';
+update userinfo set cash=100000 where uid='userF';
+update userinfo set cash=35000 where uid='userG';
+update userinfo set cash=1000000 where uid='userH';
+
+select * from userinfo;
