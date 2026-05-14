@@ -22,6 +22,7 @@ mono_crash.*
 
 # Mysql Connect Password
 MysqlConnectString.cs
+.env
 
 # Build results
 [Dd]ebug/
