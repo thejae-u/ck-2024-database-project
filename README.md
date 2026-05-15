@@ -10,8 +10,16 @@
 - Database : `MySql`
 
 ### Requirement
-- `MysqlConnectString.cs`
-  - Mysql Connect를 위한 `Uid, Pwd string`이 있는 파일
+- `.env`
+   ```
+    DB_SERVER=
+    DB_PORT=
+    DB_DATABASE=
+    DB_USER=
+    DB_PASSWORD=
+    MYSQL_DATABASE=
+    MYSQL_ROOT_PASSWORD=
+  ``` 
 - `NetworkData.dll`
   - `NetworkData` 클래스로 직렬화 및 역직렬화를 위한 파일
   - NetworkData 프로젝트로 빌드 후 각 프로젝트에 `dll` 참조

@@ -155,8 +155,7 @@ coverage*.json
 coverage*.xml
 coverage*.info
 
-# Visual Studio code coverage results
-*.coverage
+# Visual Studio code coverage results *.coverage
 *.coveragexml
 
 # NCrunch
@@ -481,5 +480,8 @@ fabric.properties
 
 # Android studio 3.1+ serialized cache file
 .idea/caches/build_file_checksums.ser
+
+# mysql data
+mysql_data/
 
 # End of https://www.toptal.com/developers/gitignore/api/rider,csharp

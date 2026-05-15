@@ -6,7 +6,7 @@ using NetworkDataDLL;
 
 public static class DatabaseClient
 {
-    private static readonly string SERVER_DOMAIN = "jaeu.iptime.org";
+    private static readonly string SERVER_DOMAIN = "127.0.0.1";
     private static readonly int PORT = 56000;
     
     private static TcpClient _client;
